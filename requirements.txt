@@ -1,0 +1,4 @@
+Flask==1.1.2
+werkzeug==0.16.1
+requests==2.23.0
+flask-cors==3.0.9
