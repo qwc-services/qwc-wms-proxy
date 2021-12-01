@@ -8,12 +8,18 @@
 from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import requests
+import os
 
 app = Flask(__name__)
 CORS(app)
 
+# Timeout for GET/DELETE. PUT/POST uses PROXY_TIMEOUT*3
+PROXY_TIMEOUT = int(os.environ.get('PROXY_TIMEOUT', 10))
+# Supported HTTP methods. e.g. 'GET,POST,PUT,DELETE'
+PROXY_METHODS = os.environ.get('PROXY_METHODS', 'GET').split(',')
 
-@app.route("/", methods=['GET', 'POST', 'PUT', 'DELETE'])
+
+@app.route("/", methods=PROXY_METHODS)
 # /?url=<url>&filename=<filename>
 # url: the url to proxy
 # filename: optional, if set it sets a content-disposition header with the specified filename
@@ -23,18 +29,18 @@ def proxy():
     if request.method == 'POST':
         headers = {'content-type': request.headers['content-type']}
         req = requests.post(
-            url, stream=True, timeout=30,
+            url, stream=True, timeout=PROXY_TIMEOUT*3,
             data=request.get_data(), headers=headers)
     elif request.method == 'PUT':
         headers = {'content-type': request.headers['content-type']}
         req = requests.put(
-            url, stream=True, timeout=30,
+            url, stream=True, timeout=PROXY_TIMEOUT*3,
             data=request.get_data(),
             headers=headers)
     elif request.method == 'DELETE':
-        req = requests.delete(url, stream=True, timeout=10)
+        req = requests.delete(url, stream=True, timeout=PROXY_TIMEOUT)
     elif request.method == 'GET':
-        req = requests.get(url, stream=True, timeout=10)
+        req = requests.get(url, stream=True, timeout=PROXY_TIMEOUT)
     else:
         raise "Invalid operation"
     response = Response(stream_with_context(
