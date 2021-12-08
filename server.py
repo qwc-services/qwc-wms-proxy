@@ -31,10 +31,12 @@ def proxy():
         abort(400, "Invalid parameters")
     filename = request.args.get('filename')
 
-    params = request.args.copy()
-    del params['url']
+    app.logger.info("Forwarding request to %s" % url)
 
-    if request.method == 'POST':
+    if request.method == 'GET':
+        req = requests.get(
+            url, stream=True, timeout=PROXY_TIMEOUT)
+    elif request.method == 'POST':
         headers = {'content-type': request.headers['content-type']}
         req = requests.post(
             url, stream=True, timeout=PROXY_TIMEOUT*3,
@@ -47,9 +49,6 @@ def proxy():
             headers=headers)
     elif request.method == 'DELETE':
         req = requests.delete(url, stream=True, timeout=PROXY_TIMEOUT)
-    elif request.method == 'GET':
-        req = requests.get(
-            url, params=params, stream=True, timeout=PROXY_TIMEOUT)
     else:
         raise "Invalid operation"
 
