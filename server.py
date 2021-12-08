@@ -5,7 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from flask import Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, request, jsonify, Response, stream_with_context, abort
 from flask_cors import CORS
 import requests
 import os
@@ -17,6 +17,8 @@ CORS(app)
 PROXY_TIMEOUT = int(os.environ.get('PROXY_TIMEOUT', 10))
 # Supported HTTP methods. e.g. 'GET,POST,PUT,DELETE'
 PROXY_METHODS = os.environ.get('PROXY_METHODS', 'GET').split(',')
+# Forbidden content types. e.g. 'html,plain'
+DENY_CONTENT = os.environ.get('DENY_CONTENT', 'html,plain').split(',')
 
 
 @app.route("/", methods=PROXY_METHODS)
@@ -25,7 +27,13 @@ PROXY_METHODS = os.environ.get('PROXY_METHODS', 'GET').split(',')
 # filename: optional, if set it sets a content-disposition header with the specified filename
 def proxy():
     url = request.args.get('url')
+    if not url:
+        abort(400, "Invalid parameters")
     filename = request.args.get('filename')
+
+    params = request.args.copy()
+    del params['url']
+
     if request.method == 'POST':
         headers = {'content-type': request.headers['content-type']}
         req = requests.post(
@@ -40,9 +48,15 @@ def proxy():
     elif request.method == 'DELETE':
         req = requests.delete(url, stream=True, timeout=PROXY_TIMEOUT)
     elif request.method == 'GET':
-        req = requests.get(url, stream=True, timeout=PROXY_TIMEOUT)
+        req = requests.get(
+            url, params=params, stream=True, timeout=PROXY_TIMEOUT)
     else:
         raise "Invalid operation"
+
+    for typestr in DENY_CONTENT:
+        if typestr in req.headers['content-type']:
+            abort(400)
+
     response = Response(stream_with_context(
         req.iter_content(chunk_size=1024)), status=req.status_code)
     if filename:
