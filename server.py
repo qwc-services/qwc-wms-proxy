@@ -6,7 +6,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from flask import Flask, request, jsonify, Response, stream_with_context, abort
-from flask_cors import CORS
 import requests
 import os
 
@@ -65,5 +64,8 @@ def proxy():
     return response
 
 
-if __name__ == "__main__":
+# local webserver
+if __name__ == '__main__':
+    from flask_cors import CORS
+    CORS(app)
     app.run(host='localhost', port=5000, debug=True)
