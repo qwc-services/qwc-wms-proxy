@@ -10,7 +10,6 @@ import requests
 import os
 
 app = Flask(__name__)
-CORS(app)
 
 # Timeout for GET/DELETE. PUT/POST uses PROXY_TIMEOUT*3
 PROXY_TIMEOUT = int(os.environ.get('PROXY_TIMEOUT', 10))
@@ -62,6 +61,18 @@ def proxy():
             'attachment; filename=' + filename
     response.headers['content-type'] = req.headers['content-type']
     return response
+
+
+""" readyness probe endpoint """
+@app.route("/ready", methods=['GET'])
+def ready():
+    return jsonify({"status": "OK"})
+
+
+""" liveness probe endpoint """
+@app.route("/healthz", methods=['GET'])
+def healthz():
+    return jsonify({"status": "OK"})
 
 
 # local webserver
