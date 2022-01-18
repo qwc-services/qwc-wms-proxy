@@ -6,10 +6,16 @@
 # LICENSE file in the root directory of this source tree.
 
 from flask import Flask, request, jsonify, Response, stream_with_context, abort
+from flask_jwt_extended import create_access_token
+from qwc_services_core.auth import auth_manager, optional_auth, get_auth_user
+
 import requests
 import os
+from urllib.parse import urlparse
 
 app = Flask(__name__)
+
+jwt = auth_manager(app)
 
 # Timeout for GET/DELETE. PUT/POST uses PROXY_TIMEOUT*3
 PROXY_TIMEOUT = int(os.environ.get('PROXY_TIMEOUT', 10))
@@ -20,6 +26,7 @@ DENY_CONTENT = os.environ.get('DENY_CONTENT', 'html,plain').split(',')
 
 
 @app.route("/", methods=PROXY_METHODS)
+@optional_auth
 # /?url=<url>&filename=<filename>
 # url: the url to proxy
 # filename: optional, if set it sets a content-disposition header with the specified filename
@@ -29,11 +36,18 @@ def proxy():
         abort(400, "Invalid parameters")
     filename = request.args.get('filename')
 
+    identity = get_auth_user()
+    urlparts = urlparse(url)
+    headers = {}
+    if identity and "%s:%d" % (urlparts.hostname, urlparts.port) == request.host:
+        access_token = create_access_token(identity)
+        headers['Authorization'] = "Bearer " + access_token
+
     app.logger.info("Forwarding request to %s" % url)
 
     if request.method == 'GET':
         req = requests.get(
-            url, stream=True, timeout=PROXY_TIMEOUT)
+            url, stream=True, timeout=PROXY_TIMEOUT, headers=headers)
     elif request.method == 'POST':
         headers = {'content-type': request.headers['content-type']}
         req = requests.post(
