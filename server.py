@@ -7,7 +7,7 @@
 
 from flask import Flask, request, jsonify, Response, stream_with_context, abort
 from flask_jwt_extended import create_access_token
-from qwc_services_core.auth import auth_manager, optional_auth, get_auth_user
+from qwc_services_core.auth import auth_manager, optional_auth, get_identity
 
 import requests
 import os
@@ -36,7 +36,7 @@ def proxy():
         abort(400, "Invalid parameters")
     filename = request.args.get('filename')
 
-    identity = get_auth_user()
+    identity = get_identity()
     urlparts = urlparse(url)
     headers = {}
     if identity and "%s:%d" % (urlparts.hostname, urlparts.port) == request.host:
