@@ -16,18 +16,6 @@ The docker image can be run with the following command:
 Development
 -----------
 
-Create a virtual environment:
+Install dependencies and run service:
 
-    python3 -m venv .venv
-
-Activate virtual environment:
-
-    source .venv/bin/activate
-
-Install requirements:
-
-    pip install -r requirements.txt
-
-Start local service:
-
-    python src/server.py
+    uv run src/server.py
