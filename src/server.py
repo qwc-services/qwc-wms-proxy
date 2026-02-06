@@ -40,6 +40,7 @@ def proxy():
     urlparts = urlparse(url)
     headers = {}
     if identity and "%s:%d" % (urlparts.hostname, urlparts.port) == request.host:
+        app.logger.debug("Injecting Authorization header for identity %s" % str(identity))
         access_token = create_access_token(identity)
         headers['Authorization'] = "Bearer " + access_token
 
@@ -62,10 +63,12 @@ def proxy():
     elif request.method == 'DELETE':
         req = requests.delete(url, stream=True, timeout=PROXY_TIMEOUT)
     else:
-        raise "Invalid operation"
+        app.logger.debug("Invalid operation")
+        abort(400)
 
     for typestr in DENY_CONTENT:
         if typestr in req.headers['content-type']:
+            app.logger.debug("Forbidden content type %s" % req.headers['content-type'])
             abort(400)
 
     response = Response(stream_with_context(
