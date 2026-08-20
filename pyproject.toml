@@ -9,7 +9,7 @@ dependencies = [
     "Werkzeug~=3.1.0",
     "requests~=2.32.0",
     "Flask-JWT-Extended~=4.7.0",
-    "qwc-services-core~=1.6.0"
+    "qwc-services-core~=1.7.0"
 ]
 
 [dependency-groups]
