@@ -1,37 +1,45 @@
-name: Build and publish docker image
+name: Run tests and build
 
 on:
+  pull_request:
   push:
+    branches:
+      - '**'
     tags:
       - 'v*'
 
 jobs:
 
-    build:
-      if: github.ref_type == 'tag'
-      runs-on: ubuntu-latest
-      steps:
+  test:
+    uses: ./.github/workflows/test.yml
 
-      - uses: actions/checkout@master
+  build:
+    if: github.ref_type == 'tag'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
 
-      - name: Get version tag
-        id: get_tag
-        run: |
-          if [ ${{ endsWith(github.ref, '-lts') }} = true ]; then
-            echo "tag=latest-lts,latest-${GITHUB_REF:11:4}-lts,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
-            echo "base_tag=latest-${GITHUB_REF:11:4}-lts" >>$GITHUB_OUTPUT
-          else
-            echo "tag=latest,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
-            echo "base_tag=latest" >>$GITHUB_OUTPUT
-          fi
+    - uses: actions/checkout@master
 
-      - name: Build and publish docker image
-        uses: elgohr/Publish-Docker-Github-Action@v5
-        env:
-          BASE_TAG: ${{ steps.get_tag.outputs.base_tag }}
-        with:
-          name: sourcepole/${{ github.event.repository.name }}
-          username: ${{ secrets.DOCKER_HUB_USER }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          tags: "${{ steps.get_tag.outputs.tag }}"
-          buildargs: BASE_TAG
+    - name: Get version tag
+      id: get_tag
+      run: |
+        if [ ${{ endsWith(github.ref, '-lts') }} = true ]; then
+          echo "tag=latest-lts,latest-${GITHUB_REF:11:4}-lts,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
+          echo "base_tag=latest-${GITHUB_REF:11:4}-lts" >>$GITHUB_OUTPUT
+        else
+          echo "tag=latest,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
+          echo "base_tag=latest" >>$GITHUB_OUTPUT
+        fi
+
+    - name: Build and publish docker image
+      uses: elgohr/Publish-Docker-Github-Action@v5
+      env:
+        BASE_TAG: ${{ steps.get_tag.outputs.base_tag }}
+        UPDATE_DEPS: ${{ startsWith(steps.get_tag.outputs.tag, 'latest') }}
+      with:
+        name: sourcepole/${{ github.event.repository.name }}
+        username: ${{ secrets.DOCKER_HUB_USER }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+        tags: "${{ steps.get_tag.outputs.tag }}"
+        buildargs: BASE_TAG,UPDATE_DEPS
